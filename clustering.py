@@ -5,7 +5,10 @@
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np  # ← ESTA LÍNEA ES LA CLAVE
+import numpy as np  # ←
+import pandas as pd
+from sqlalchemy import text
+from sentence_transformers import SentenceTransformer
 # opcionales:
 try:
     import hdbscan  # noqa
