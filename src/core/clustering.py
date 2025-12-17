@@ -5,10 +5,11 @@
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np  # ←
+import numpy as np
 import pandas as pd
 from sqlalchemy import text
 from sentence_transformers import SentenceTransformer
+
 # opcionales:
 try:
     import hdbscan  # noqa
@@ -19,6 +20,7 @@ try:
     import umap  # noqa
 except Exception:
     umap = None
+
 SQL_TASKS = """
 SELECT t.id AS tarea_id,
        t.proyecto_id,
@@ -94,6 +96,7 @@ def short_preview(title: str, desc: str, limit: int = 160) -> str:
 
 def compute_embeddings(texts: list[str]) -> np.ndarray:
     model = get_model()
+    # show_progress_bar=False para Logs más limpios en prod
     emb = model.encode(texts, show_progress_bar=False, normalize_embeddings=True)
     return np.array(emb)
 
@@ -189,6 +192,7 @@ def run_clustering(df: pd.DataFrame,
     coords = None
     if use_umap and umap is not None and len(emb) >= 5:
         reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, random_state=42)
+        # convert numpy array to list for JSON serialization
         coords = reducer.fit_transform(emb).tolist()
 
     # Etiquetado por algoritmo (robusto a pocos puntos)
@@ -200,12 +204,10 @@ def run_clustering(df: pd.DataFrame,
         else:
             labels = np.zeros(len(emb), dtype=int)
     else:
-        
         # kmeans por defecto
         if len(emb) < 2:
             labels = np.zeros(len(emb), dtype=int)
         else:
-            
             k_eff = k if (k and k >= 2) else 2
             k_eff = min(k_eff, len(emb))
             clusterer = KMeans(n_clusters=k_eff, n_init="auto", random_state=42)
@@ -224,7 +226,8 @@ def run_clustering(df: pd.DataFrame,
                 "prioridad": df.iloc[pos]['prioridad'],
                 "puntos": int(df.iloc[pos]['puntos']),
                 "texto": previews[pos],
-                "coord": (coords[pos] if coords is not None else None)
+                # Ensure coord is serializable or None
+                "coord": (coords[pos] if coords is not None and pos < len(coords) else None)
             })
 
         sample_titles = [titles[pos] for pos in idxs[:3]]

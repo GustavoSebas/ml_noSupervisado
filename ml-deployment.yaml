@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-clustering-app
+  labels:
+    app: ml-clustering
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-clustering
+  template:
+    metadata:
+      labels:
+        app: ml-clustering
+    spec:
+      containers:
+        - name: ml-clustering-container
+          # Reemplazar con la imagen real en tu registry
+          image: my-registry/ml-clustering:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            # Límites altos debido a cargas de DataFrames en memoria
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-clustering-service
+spec:
+  type: ClusterIP
+  selector:
+    app: ml-clustering
+  ports:
+    - port: 80
+      targetPort: 8000
